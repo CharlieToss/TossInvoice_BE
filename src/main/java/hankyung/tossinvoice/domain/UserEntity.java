@@ -44,9 +44,6 @@ public class UserEntity extends BaseTimeEntity {
     @Column(name = "password_hash", length = 255, nullable = false)
     private String passwordHash;
 
-    @Column(name = "deleted_at")
-    private LocalDate deletedAt;
-
     @Column(name = "report_count", nullable = false)
     private Integer reportCount = 0;
 
@@ -54,10 +51,13 @@ public class UserEntity extends BaseTimeEntity {
     @Column(name = "company_type", length = 20, nullable = false)
     private CompanyType companyType;
 
+    @Column(name = "deleted_at")
+    private LocalDate deletedAt;
+
     @Builder
     public UserEntity(String companyName, String businessType, String businessNumber,
                       String ceoName, String account, String bank,
-                      String email, String passwordHash) {
+                      String email, String passwordHash, CompanyType companyType) {
         this.companyName = companyName;
         this.businessType = businessType;
         this.businessNumber = businessNumber;
@@ -66,5 +66,6 @@ public class UserEntity extends BaseTimeEntity {
         this.bank = bank;
         this.email = email;
         this.passwordHash = passwordHash;
+        this.companyType = companyType;
     }
 }
