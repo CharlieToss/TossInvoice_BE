@@ -21,10 +21,4 @@ public class BaseResponse<T> {
     public static <T> BaseResponse<T> fail(CustomErrorResponse customErrorResponse) {
         return new BaseResponse<>(customErrorResponse.getErrorCode(), customErrorResponse.getMessage(), null);
     }
-
-    public BaseResponse(T result) {
-        this.errorCode = GlobalErrorCode.SUCCESS.getErrorCode();
-        this.message = GlobalErrorCode.SUCCESS.getMessage();
-        this.result = result;
-    }
 }
