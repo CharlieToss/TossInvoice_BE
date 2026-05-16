@@ -2,7 +2,6 @@ package hankyung.tossinvoice.global.base;
 
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import hankyung.tossinvoice.global.exception.CustomErrorResponse;
-import hankyung.tossinvoice.global.exception.GlobalErrorCode;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
