@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
     private final UserRepository userRepository;
 
-    @Transactional
+    @Transactional(readOnly = true)
     public CompanySearchResponse findByBusinessNumber(String businessNumber) {
         UserEntity user = userRepository.findByBusinessNumber(businessNumber)
                 .orElseThrow(() -> BaseException.type(UserErrorCode.COMPANY_NOT_FOUND));
