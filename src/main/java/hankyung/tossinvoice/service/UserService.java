@@ -31,6 +31,9 @@ public class UserService {
                 .bank(user.getBank())
                 .account(user.getAccount())
                 .companyType(user.getCompanyType().getDescription())
+                .address(user.getAddress())
+                .phone(user.getPhone())
+                .email(user.getEmail())
                 .build();
 
         return companySearchResponse;

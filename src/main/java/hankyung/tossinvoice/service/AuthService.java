@@ -52,6 +52,8 @@ public class AuthService {
                 .account(request.account())
                 .bank(request.bank())
                 .email(request.email())
+                .address(request.address())
+                .phone(request.phone())
                 .passwordHash(passwordHash)
                 .companyType(request.companyType())
                 .build();

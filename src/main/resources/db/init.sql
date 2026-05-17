@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS users (
     account         VARCHAR(20)  NOT NULL,
     bank            VARCHAR(20)  NOT NULL,
     email           VARCHAR(100) NOT NULL,
+    address         VARCHAR(200) NOT NULL,
+    phone           VARCHAR(20)  NOT NULL,
     password_hash   VARCHAR(255) NOT NULL,
     deleted_at      DATE         NULL,
     report_count    INT          NOT NULL DEFAULT 0,
@@ -44,4 +46,132 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
     PRIMARY KEY (user_id),
     CONSTRAINT fk_refresh_tokens_user
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+
+-- =============================================================================
+-- trade : 거래 1건의 코어
+--   - status : PENDING_PO / PENDING_SELLER_SIGN / PENDING_INVOICE
+--              / PENDING_BUYER_CONFIRM / COMPLETED / CANCELLED
+--   - row 생성 시점 = PI 발행 시점 (수주처가 견적서 발행 누른 순간)
+--   - total_amount = SUM(order_items.subtotal) + tax (서버 재계산)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS trade (
+    id            BIGINT       NOT NULL AUTO_INCREMENT,
+    seller_id     BIGINT       NOT NULL,
+    buyer_id      BIGINT       NOT NULL,
+    status        VARCHAR(30)  NOT NULL,
+    deposit_rate  DECIMAL(5, 2) NULL,
+    total_amount  INT          NULL,
+    tax           INT          NULL,
+    created_at    DATETIME(6)  NULL,
+    modified_at   DATETIME(6)  NULL,
+    PRIMARY KEY (id),
+    KEY idx_trade_seller (seller_id),
+    KEY idx_trade_buyer  (buyer_id),
+    CONSTRAINT fk_trade_seller FOREIGN KEY (seller_id) REFERENCES users (id),
+    CONSTRAINT fk_trade_buyer  FOREIGN KEY (buyer_id)  REFERENCES users (id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+
+-- =============================================================================
+-- proforma_invoice : 견적서(PI) — trade와 1:1
+--   - valid_until : 발주처가 이 시각까지 PO 작성을 시작해야 유효 (지나면 스케줄러가 CANCELLED 처리)
+--   - seller_signature_url : 수주처 서명 S3 URL
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS proforma_invoice (
+    id                          BIGINT       NOT NULL AUTO_INCREMENT,
+    trade_id                    BIGINT       NOT NULL,
+    doc_number                  VARCHAR(30)  NOT NULL,
+    proforma_invoice_datetime   DATETIME(6)  NOT NULL,
+    production_days             INT          NOT NULL,
+    valid_until                 DATETIME(6)  NOT NULL,
+    seller_signature_url        VARCHAR(512) NULL,
+    seller_signed_at            DATETIME(6)  NULL,
+    created_at                  DATETIME(6)  NULL,
+    modified_at                 DATETIME(6)  NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_proforma_invoice_trade (trade_id),
+    UNIQUE KEY uk_proforma_invoice_doc_number (doc_number),
+    CONSTRAINT fk_proforma_invoice_trade FOREIGN KEY (trade_id) REFERENCES trade (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+
+-- =============================================================================
+-- purchase_order : 발주서(PO) — trade와 1:1
+--   - row 생성 시점 = 발주처가 "발주서 작성하기" 클릭 직후 (라우팅 복귀용 빈 row)
+--   - buyer_signature_url 채워지면 = 발주처 발행 완료
+--   - seller_signature_url 채워지면 = 수주처 카운터서명 완료 → PO 확정(선금 자동입금)
+--   - seller_account_snapshot/seller_bank_snapshot : 결제 트리거 시점 계좌 감사용
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS purchase_order (
+    id                        BIGINT       NOT NULL AUTO_INCREMENT,
+    trade_id                  BIGINT       NOT NULL,
+    doc_number                VARCHAR(30)  NOT NULL,
+    purchase_order_datetime   DATETIME(6)  NOT NULL,
+    desired_delivery_date     DATE         NULL,
+    confirmed_delivery_date   DATE         NULL,
+    buyer_signature_url       VARCHAR(512) NULL,
+    buyer_signed_at           DATETIME(6)  NULL,
+    seller_signature_url      VARCHAR(512) NULL,
+    seller_signed_at          DATETIME(6)  NULL,
+    seller_account_snapshot   VARCHAR(20)  NULL,
+    seller_bank_snapshot      VARCHAR(20)  NULL,
+    deposit_paid_at           DATETIME(6)  NULL,
+    deposit_amount            INT          NULL,
+    created_at                DATETIME(6)  NULL,
+    modified_at               DATETIME(6)  NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_purchase_order_trade (trade_id),
+    UNIQUE KEY uk_purchase_order_doc_number (doc_number),
+    CONSTRAINT fk_purchase_order_trade FOREIGN KEY (trade_id) REFERENCES trade (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+
+-- =============================================================================
+-- invoice : 최종 인보이스 — trade와 1:1
+--   - row 생성 시점 = 수주처가 인보이스 발행 (seller_signature_url 채워진 상태로 insert)
+--   - buyer_signature_url 채워지면 = 발주처 최종 서명 → 거래 종결(후금 자동입금)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS invoice (
+    id                        BIGINT       NOT NULL AUTO_INCREMENT,
+    trade_id                  BIGINT       NOT NULL,
+    doc_number                VARCHAR(30)  NOT NULL,
+    invoice_datetime          DATETIME(6)  NOT NULL,
+    shipping_info             VARCHAR(255) NULL,
+    seller_signature_url      VARCHAR(512) NULL,
+    seller_signed_at          DATETIME(6)  NULL,
+    buyer_signature_url       VARCHAR(512) NULL,
+    buyer_signed_at           DATETIME(6)  NULL,
+    seller_account_snapshot   VARCHAR(20)  NULL,
+    seller_bank_snapshot      VARCHAR(20)  NULL,
+    balance_paid_at           DATETIME(6)  NULL,
+    balance_amount            INT          NULL,
+    created_at                DATETIME(6)  NULL,
+    modified_at               DATETIME(6)  NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_invoice_trade (trade_id),
+    UNIQUE KEY uk_invoice_doc_number (doc_number),
+    CONSTRAINT fk_invoice_trade FOREIGN KEY (trade_id) REFERENCES trade (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+
+-- =============================================================================
+-- order_items : 거래 라인 아이템 — trade에 1:N
+--   - 가격(unit_price/subtotal)은 PI 작성 시점에 락이며 PO/Invoice에서 수정 불가
+--   - subtotal은 서버에서 재계산해 저장(클라가 보낸 값 신뢰 X)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS order_items (
+    id            BIGINT       NOT NULL AUTO_INCREMENT,
+    trade_id      BIGINT       NOT NULL,
+    product_name  VARCHAR(255) NOT NULL,
+    product_num   INT          NOT NULL,
+    quantity      INT          NOT NULL,
+    unit_price    INT          NOT NULL,
+    subtotal      INT          NOT NULL,
+    created_at    DATETIME(6)  NULL,
+    modified_at   DATETIME(6)  NULL,
+    PRIMARY KEY (id),
+    KEY idx_order_items_trade (trade_id),
+    CONSTRAINT fk_order_items_trade FOREIGN KEY (trade_id) REFERENCES trade (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;

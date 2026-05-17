@@ -11,6 +11,9 @@ public record CompanySearchResponse(
         String businessType,
         String bank,
         String account,
-        String companyType
+        String companyType,
+        String address,
+        String phone,
+        String email
 ) {
 }
