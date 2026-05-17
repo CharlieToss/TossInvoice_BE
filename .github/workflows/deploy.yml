@@ -1,0 +1,34 @@
+name: simple-deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to GCP instance
+        env:
+          GCP_HOST: ${{ secrets.GCP_HOST }}
+          GCP_USER: ${{ secrets.GCP_USER }}
+          GCP_SSH_KEY: ${{ secrets.GCP_SSH_KEY }}
+          APPLICATION_YML: ${{ secrets.APPLICATION_YML }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$GCP_SSH_KEY" > ~/.ssh/gcp_key
+          chmod 600 ~/.ssh/gcp_key
+
+          printf '%s\n' "$APPLICATION_YML" > application.yml
+
+          scp -4 -o StrictHostKeyChecking=no \
+            -i ~/.ssh/gcp_key \
+            application.yml \
+            "$GCP_USER@$GCP_HOST:/home/$GCP_USER/deploy/application.yml"
+
+          ssh -4 -o StrictHostKeyChecking=no \
+            -i ~/.ssh/gcp_key \
+            "$GCP_USER@$GCP_HOST" \
+            "bash /home/$GCP_USER/deploy/deploy.sh"
