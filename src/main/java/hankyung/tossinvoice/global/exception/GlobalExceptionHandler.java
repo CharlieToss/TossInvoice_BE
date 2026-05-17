@@ -19,6 +19,8 @@ import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.util.List;
@@ -128,6 +130,25 @@ public class GlobalExceptionHandler {
     public ResponseEntity<CustomErrorResponse> handleMissingRequestHeader(MissingRequestHeaderException e) {
         log.error("[필수 헤더 누락] {}", e.getMessage());
         return convert(GlobalErrorCode.MISSING_REQUEST_HEADER);
+    }
+
+    /**
+     * 필수 multipart 파트가 누락된 경우 (예: data 또는 signature 미전송)
+     */
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<CustomErrorResponse> handleMissingPart(MissingServletRequestPartException e) {
+        log.warn("[필수 multipart 파트 누락] {}", e.getRequestPartName());
+        return convert(GlobalErrorCode.MISSING_REQUEST_PART,
+                String.format("'%s' 파트가 필요합니다.", e.getRequestPartName()));
+    }
+
+    /**
+     * 업로드 파일이 허용 크기를 초과한 경우
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<CustomErrorResponse> handleMaxUploadSize(MaxUploadSizeExceededException e) {
+        log.warn("[업로드 용량 초과] {}", e.getMessage());
+        return convert(GlobalErrorCode.PAYLOAD_TOO_LARGE);
     }
 
     /**

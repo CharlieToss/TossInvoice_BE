@@ -43,6 +43,8 @@ public enum GlobalErrorCode implements ErrorCode{
     INVALID_TOKEN_TYPE(HttpStatus.UNAUTHORIZED, "REQUEST_023", "토큰 타입이 올바르지 않습니다."),
     REFRESH_TOKEN_NOT_FOUND(HttpStatus.UNAUTHORIZED, "REQUEST_024", "리프레시 토큰이 만료되었거나 존재하지 않습니다."),
     REFRESH_TOKEN_MISMATCH(HttpStatus.UNAUTHORIZED, "REQUEST_025", "리프레시 토큰이 일치하지 않습니다."),
+    MISSING_REQUEST_PART(HttpStatus.BAD_REQUEST, "REQUEST_026", "필수 multipart 파트가 누락되었습니다."),
+    PAYLOAD_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE, "REQUEST_027", "업로드 파일 크기가 허용된 한도를 초과했습니다."),
 
 
     /**

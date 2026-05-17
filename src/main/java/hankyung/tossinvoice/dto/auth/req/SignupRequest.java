@@ -38,6 +38,14 @@ public record SignupRequest(
         @Size(max = 100, message = "이메일은 최대 100자까지 입력 가능합니다.")
         String email,
 
+        @NotBlank(message = "주소를 입력해주세요.")
+        @Size(max = 200, message = "주소는 최대 200자까지 입력 가능합니다.")
+        String address,
+
+        @NotBlank(message = "전화번호를 입력해주세요.")
+        @Size(max = 20, message = "전화번호는 최대 20자까지 입력 가능합니다.")
+        String phone,
+
         @NotBlank(message = "비밀번호를 입력해주세요.")
         @Size(min = 8, max = 100, message = "비밀번호는 8자 이상 100자 이하로 입력해주세요.")
         String password,

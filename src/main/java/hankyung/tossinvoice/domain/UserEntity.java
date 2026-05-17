@@ -41,6 +41,14 @@ public class UserEntity extends BaseTimeEntity {
     @Column(name = "email", length = 100, nullable = false, unique = true)
     private String email;
 
+    // PI/PO/Invoice 문서 헤더에 표시되는 회사 주소(예: "서울특별시 종로구 종로12").
+    @Column(name = "address", length = 200, nullable = false)
+    private String address;
+
+    // 문서 헤더에 표시되는 일반 연락처 전화(02-1234-5678 등).
+    @Column(name = "phone", length = 20, nullable = false)
+    private String phone;
+
     @Column(name = "password_hash", length = 255, nullable = false)
     private String passwordHash;
 
@@ -57,7 +65,8 @@ public class UserEntity extends BaseTimeEntity {
     @Builder
     public UserEntity(String companyName, String businessType, String businessNumber,
                       String ceoName, String account, String bank,
-                      String email, String passwordHash, CompanyType companyType) {
+                      String email, String address, String phone,
+                      String passwordHash, CompanyType companyType) {
         this.companyName = companyName;
         this.businessType = businessType;
         this.businessNumber = businessNumber;
@@ -65,6 +74,8 @@ public class UserEntity extends BaseTimeEntity {
         this.account = account;
         this.bank = bank;
         this.email = email;
+        this.address = address;
+        this.phone = phone;
         this.passwordHash = passwordHash;
         this.companyType = companyType;
     }
