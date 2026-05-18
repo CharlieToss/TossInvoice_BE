@@ -2,6 +2,7 @@ package hankyung.tossinvoice.service;
 
 import hankyung.tossinvoice.domain.ReportEntity;
 import hankyung.tossinvoice.domain.TradeEntity;
+import hankyung.tossinvoice.domain.constant.NotificationType;
 import hankyung.tossinvoice.domain.constant.TradeStatus;
 import hankyung.tossinvoice.domain.exception.ReportErrorCode;
 import hankyung.tossinvoice.domain.exception.TradeErrorCode;
@@ -20,6 +21,7 @@ public class ReportService {
 
     private final ReportRepository reportRepository;
     private final TradeRepository tradeRepository;
+    private final NotificationService notificationService;
 
     /*
     1. 신고버튼을 누르면 거래ID, 피신고자ID를 받아오고 Report테이블에 등록하고, 거래 상태를 cancel로 변경.
@@ -57,9 +59,10 @@ public class ReportService {
                 .tradeId(tradeId)
                 .reportedId(reportedId)
                 .build();
-        ReportEntity savedReport = reportRepository.save(report);
+        reportRepository.save(report);
 
         trade.changeStatus(TradeStatus.CANCELLED);
+        notificationService.send(reportedId, tradeId, NotificationType.REPORTED);
     }
 
     // 2. 회사 정보를 조회할 때, Report테이블에서 해당 회사ID가 피신고자ID로 등록되어 있는 횟수를 확인하여, 쵯수에 맞게 결과를 반환해준다.

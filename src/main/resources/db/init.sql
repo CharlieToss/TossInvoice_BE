@@ -189,3 +189,19 @@ CREATE TABLE IF NOT EXISTS report (
     CONSTRAINT fk_report_trade    FOREIGN KEY (trade_id)    REFERENCES trade (id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
+
+-- =============================================================================
+-- notifications : 알림 테이블
+--   - trade_id : 거래 관련 알림이 아닌 경우 NULL
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS notifications (
+    id                BIGINT      NOT NULL AUTO_INCREMENT,
+    user_id           BIGINT      NOT NULL,
+    trade_id          BIGINT      NULL,
+    notification_type VARCHAR(30) NOT NULL,
+    created_at        DATETIME(6) NULL,
+    PRIMARY KEY (id),
+    KEY idx_notifications_user (user_id),
+    CONSTRAINT fk_notifications_user  FOREIGN KEY (user_id)  REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_notifications_trade FOREIGN KEY (trade_id) REFERENCES trade (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
