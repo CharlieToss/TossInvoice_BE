@@ -76,4 +76,14 @@ public class UserEntity extends BaseTimeEntity {
         this.passwordHash = passwordHash;
         this.companyType = companyType;
     }
+
+    // 계좌번호 변경 — 통장사본 OCR 1차 검증을 통과한 새 계좌번호로 갱신합니다.
+    public void updateAccount(String account) {
+        this.account = account;
+    }
+
+    // 비밀번호 변경 — BCrypt 해시값을 받아 저장합니다(평문은 서비스 레이어에서 해싱).
+    public void updatePassword(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
 }
