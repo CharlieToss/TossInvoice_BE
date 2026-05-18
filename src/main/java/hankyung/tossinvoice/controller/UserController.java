@@ -14,7 +14,7 @@ public class UserController {
     private final UserService userService;
 
     // 사업자번호로 거래처(회원) 정보와 신고 카운트 기반 위험도를 조회합니다.
-    @GetMapping("/api/v1/company-search/{businessNumber}")
+    @GetMapping("/api/v1/company/{businessNumber}")
     public ResponseEntity<CompanySearchResponse> findByBusinessNumber(
             @PathVariable String businessNumber
     ) {

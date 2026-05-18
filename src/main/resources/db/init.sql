@@ -7,7 +7,6 @@
 -- =============================================================================
 -- users : 회원(거래처) 테이블
 --   - email, business_number는 unique
---   - report_count는 거래처 위험도 표시(10초과 위험 / 5초과 주의 / 그 외 정상)
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS users (
     id              BIGINT       NOT NULL AUTO_INCREMENT,
@@ -22,7 +21,6 @@ CREATE TABLE IF NOT EXISTS users (
     phone           VARCHAR(20)  NOT NULL,
     password_hash   VARCHAR(255) NOT NULL,
     deleted_at      DATE         NULL,
-    report_count    INT          NOT NULL DEFAULT 0,
     company_type    VARCHAR(20)  NOT NULL,
     created_at      DATETIME(6)  NULL,
     modified_at     DATETIME(6)  NULL,
@@ -175,3 +173,19 @@ CREATE TABLE IF NOT EXISTS order_items (
     KEY idx_order_items_trade (trade_id),
     CONSTRAINT fk_order_items_trade FOREIGN KEY (trade_id) REFERENCES trade (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+
+-- =============================================================================
+-- report : 신고 이력 — users와 1:N
+--   - reported_id는 trade 테이블에서 상대방으로 특정
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS report (
+    id                        BIGINT       NOT NULL AUTO_INCREMENT,
+    reported_id               BIGINT       NOT NULL,
+    trade_id                  BIGINT       NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_report_trade_reported (trade_id, reported_id),
+    CONSTRAINT fk_report_reported FOREIGN KEY (reported_id) REFERENCES users (id),
+    CONSTRAINT fk_report_trade    FOREIGN KEY (trade_id)    REFERENCES trade (id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+

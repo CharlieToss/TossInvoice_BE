@@ -4,6 +4,7 @@ import hankyung.tossinvoice.domain.UserEntity;
 import hankyung.tossinvoice.domain.exception.UserErrorCode;
 import hankyung.tossinvoice.dto.user.res.CompanySearchResponse;
 import hankyung.tossinvoice.global.exception.BaseException;
+import hankyung.tossinvoice.repository.ReportRepository;
 import hankyung.tossinvoice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
+    private final ReportRepository reportRepository;
 
     @Transactional(readOnly = true)
     public CompanySearchResponse findByBusinessNumber(String businessNumber) {
@@ -24,7 +26,7 @@ public class UserService {
         CompanySearchResponse companySearchResponse = CompanySearchResponse
                 .builder()
                 .companyName(user.getCompanyName())
-                .status(convertReportStatus(user.getReportCount()))
+                .status(convertReportStatus(user.getId()))
                 .businessNumber(user.getBusinessNumber())
                 .ceoName(user.getCeoName())
                 .businessType(user.getBusinessType())
@@ -39,10 +41,12 @@ public class UserService {
         return companySearchResponse;
     }
 
-    private String convertReportStatus(Integer reportCount) {
-        if(reportCount > 10) {
+    private String convertReportStatus(Long reportedId) {
+        Long reportCount = reportRepository.countByReportedId(reportedId);
+
+        if(reportCount > 5) {
             return "위험";
-        } else if(reportCount > 5) {
+        } else if(reportCount > 1) {
             return "주의";
         } else {
             return "정상";
