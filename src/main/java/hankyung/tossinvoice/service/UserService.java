@@ -1,6 +1,9 @@
 package hankyung.tossinvoice.service;
 
+import hankyung.tossinvoice.domain.TradeEntity;
 import hankyung.tossinvoice.domain.UserEntity;
+import hankyung.tossinvoice.domain.constant.NotificationType;
+import hankyung.tossinvoice.domain.constant.TradeStatus;
 import hankyung.tossinvoice.domain.exception.UserErrorCode;
 import hankyung.tossinvoice.dto.user.req.UpdateAccountRequest;
 import hankyung.tossinvoice.dto.user.req.UpdatePasswordRequest;
@@ -8,6 +11,7 @@ import hankyung.tossinvoice.dto.user.res.CompanySearchResponse;
 import hankyung.tossinvoice.dto.user.res.MyPageResponse;
 import hankyung.tossinvoice.global.exception.BaseException;
 import hankyung.tossinvoice.repository.ReportRepository;
+import hankyung.tossinvoice.repository.TradeRepository;
 import hankyung.tossinvoice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,12 +19,17 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Set;
+import java.util.stream.Collectors;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
     private final ReportRepository reportRepository;
+    private final TradeRepository tradeRepository;
+    private final NotificationService notificationService;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
@@ -85,6 +94,15 @@ public class UserService {
                 .orElseThrow(() -> BaseException.type(UserErrorCode.COMPANY_NOT_FOUND));
 
         user.updateAccount(request.account());
+        notifyPartners(userId, NotificationType.PARTNER_ACCOUNT_CHANGED);
+    }
+
+    private void notifyPartners(Long userId, NotificationType type) {
+        Set<Long> partnerIds = tradeRepository.findActivePartnerTrades(userId, TradeStatus.CANCELLED)
+                .stream()
+                .map(t -> t.getSellerId().equals(userId) ? t.getBuyerId() : t.getSellerId())
+                .collect(Collectors.toSet());
+        partnerIds.forEach(partnerId -> notificationService.send(partnerId, null, type));
     }
 
     // 비밀번호 변경 — 평문 비밀번호를 BCrypt로 해싱해 저장합니다.

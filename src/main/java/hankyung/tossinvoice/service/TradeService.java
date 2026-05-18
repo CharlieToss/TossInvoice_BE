@@ -6,6 +6,7 @@ import hankyung.tossinvoice.domain.ProformaInvoiceEntity;
 import hankyung.tossinvoice.domain.PurchaseOrderEntity;
 import hankyung.tossinvoice.domain.TradeEntity;
 import hankyung.tossinvoice.domain.UserEntity;
+import hankyung.tossinvoice.domain.constant.NotificationType;
 import hankyung.tossinvoice.domain.constant.TradeStatus;
 import hankyung.tossinvoice.domain.exception.TradeErrorCode;
 import hankyung.tossinvoice.domain.exception.UserErrorCode;
@@ -53,6 +54,7 @@ public class TradeService {
     private final OrderItemRepository orderItemRepository;
     private final UserRepository userRepository;
     private final StoragePort storagePort;
+    private final NotificationService notificationService;
 
     private static final DateTimeFormatter DOC_DATE = DateTimeFormatter.ofPattern("yyyy-MMdd");
 
@@ -112,6 +114,8 @@ public class TradeService {
                 .build();
         proformaInvoiceRepository.save(proformaInvoice);
 
+        notificationService.send(buyer.getId(), savedTrade.getId(), NotificationType.PI_RECEIVED);
+
         return CreateTradeResponse.builder()
                 .tradeId(savedTrade.getId())
                 .build();
@@ -130,6 +134,7 @@ public class TradeService {
         }
 
         trade.changeStatus(TradeStatus.CANCELLED);
+        notificationService.send(trade.getSellerId(), tradeId, NotificationType.TRADE_CANCELLED);
     }
 
     // === 3. PO 작성 시작 — 빈 row insert (라우팅 표시용) ==========================
@@ -154,6 +159,7 @@ public class TradeService {
                 .purchaseOrderDatetime(now)
                 .build();
         purchaseOrderRepository.save(purchaseOrder);
+        notificationService.send(trade.getSellerId(), tradeId, NotificationType.PO_STARTED);
     }
 
     // === 4. PO 작성·서명·발행 완료 (발주처) ========================================
@@ -173,6 +179,7 @@ public class TradeService {
         purchaseOrder.completeByBuyer(request.desiredDeliveryDate(), buyerSignatureUrl, LocalDateTime.now());
 
         trade.changeStatus(TradeStatus.PENDING_SELLER_SIGN);
+        notificationService.send(trade.getSellerId(), tradeId, NotificationType.PO_RECEIVED);
     }
 
     // === 5. PO 카운터서명 (수주처) → 선금 자동입금 트리거 ===========================
@@ -205,6 +212,7 @@ public class TradeService {
         );
 
         trade.changeStatus(TradeStatus.PENDING_INVOICE);
+        notificationService.send(trade.getBuyerId(), tradeId, NotificationType.PO_SIGNED);
 
         // 실제 결제 연동 대신 로그로 트리거 기록(추후 PG/뱅킹 어댑터로 대체).
         log.info("[PaymentTrigger:선금] tradeId={} sellerId={} account={} bank={} amount={}",
@@ -219,8 +227,7 @@ public class TradeService {
         requireStatus(trade, TradeStatus.PENDING_SELLER_SIGN);
 
         trade.changeStatus(TradeStatus.CANCELLED);
-
-        // 추후 알람 도메인 구현 시 발주처에 PO_REJECTED 알람 발송 트리거가 들어갈 자리입니다.
+        notificationService.send(trade.getBuyerId(), tradeId, NotificationType.TRADE_CANCELLED);
         log.info("[TradeCancelled:PO거절] tradeId={} sellerId={} buyerId={}",
                 tradeId, sellerId, trade.getBuyerId());
     }
@@ -251,6 +258,7 @@ public class TradeService {
         invoiceRepository.save(invoice);
 
         trade.changeStatus(TradeStatus.PENDING_BUYER_CONFIRM);
+        notificationService.send(trade.getBuyerId(), tradeId, NotificationType.INVOICE_RECEIVED);
     }
 
     // === 7. 인보이스 최종 서명 (발주처) → 후금 자동입금 트리거 ======================
@@ -275,6 +283,8 @@ public class TradeService {
         invoice.finalizeByBuyer(buyerSignatureUrl, now, seller.getAccount(), seller.getBank(), balanceAmount);
 
         trade.changeStatus(TradeStatus.COMPLETED);
+        notificationService.send(trade.getSellerId(), tradeId, NotificationType.TRADE_COMPLETED);
+        notificationService.send(trade.getBuyerId(), tradeId, NotificationType.TRADE_COMPLETED);
 
         log.info("[PaymentTrigger:후금] tradeId={} sellerId={} account={} bank={} amount={}",
                 tradeId, trade.getSellerId(), seller.getAccount(), seller.getBank(), balanceAmount);
