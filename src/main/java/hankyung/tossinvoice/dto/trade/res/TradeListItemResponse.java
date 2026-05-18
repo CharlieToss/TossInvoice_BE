@@ -28,7 +28,8 @@ public record TradeListItemResponse(
     public record CompanyMini(
             Long userId,
             String companyName,
-            String businessNumber
+            String businessNumber,
+            String ceoName
     ) {
     }
 }

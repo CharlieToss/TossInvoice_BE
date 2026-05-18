@@ -335,6 +335,7 @@ public class TradeService {
                 .userId(u.getId())
                 .companyName(u.getCompanyName())
                 .businessNumber(u.getBusinessNumber())
+                .ceoName(u.getCeoName())
                 .build();
     }
 
