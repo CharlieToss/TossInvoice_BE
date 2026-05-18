@@ -52,9 +52,6 @@ public class UserEntity extends BaseTimeEntity {
     @Column(name = "password_hash", length = 255, nullable = false)
     private String passwordHash;
 
-    @Column(name = "report_count", nullable = false)
-    private Integer reportCount = 0;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "company_type", length = 20, nullable = false)
     private CompanyType companyType;
