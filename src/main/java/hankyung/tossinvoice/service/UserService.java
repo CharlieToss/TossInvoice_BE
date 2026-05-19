@@ -95,7 +95,7 @@ public class UserService {
                 .build();
     }
 
-    // 계좌번호 변경 — 새 통장사본 이미지를 GCS에 업로드하고 계좌번호 + 통장사본 URL을 함께 갱신합니다.
+    // 계좌번호 변경 — 새 통장사본 이미지를 GCS에 업로드하고 은행 + 계좌번호 + 통장사본 URL을 함께 갱신합니다.
     // OCR 1차 검증은 클라이언트가 통과한 뒤 호출되므로 서버는 받은 값을 신뢰합니다.
     @Transactional
     public void updateAccount(Long userId, UpdateAccountRequest request, MultipartFile bankbook) {
@@ -103,7 +103,7 @@ public class UserService {
                 .orElseThrow(() -> BaseException.type(UserErrorCode.COMPANY_NOT_FOUND));
 
         String bankbookUrl = storagePort.upload(bankbook, "users/bankbook", BANKBOOK_ALLOWED_TYPES);
-        user.updateAccount(request.account(), bankbookUrl);
+        user.updateAccount(request.bank(), request.account(), bankbookUrl);
         notifyPartners(user, NotificationType.PARTNER_ACCOUNT_CHANGED);
     }
 

@@ -303,7 +303,8 @@
 
     <section>
         <h2>11-B. 계좌번호 변경</h2>
-        <div class="note">새 통장사본 이미지 + 새 계좌번호를 multipart로 전송. 파일 비우면 더미 PNG 자동 첨부.</div>
+        <div class="note">새 통장사본 이미지 + 새 은행/계좌번호를 multipart로 전송. 파일 비우면 더미 PNG 자동 첨부.</div>
+        <div class="row"><label>새 은행</label><input id="updateAccountBank" value="국민은행"></div>
         <div class="row"><label>새 계좌번호</label><input id="updateAccountNumber" value="110-999-888777"></div>
         <div class="row"><label>새 통장사본</label><input id="updateBankbook" type="file" accept="image/png,image/jpeg"></div>
         <button class="a" onclick="updateAccount('A')">A 계좌 변경</button>
@@ -316,6 +317,14 @@
         <div class="row"><label>새 비밀번호</label><input id="updatePasswordNew" value="newpassword123"></div>
         <button class="a" onclick="updatePassword('A')">A 비번 변경</button>
         <button class="b" onclick="updatePassword('B')">B 비번 변경</button>
+    </section>
+
+    <!-- ============== 12. 홈 대시보드 ============== -->
+    <section class="full">
+        <h2>12. 홈 대시보드 (02-B)</h2>
+        <div class="note">KPI 4종 + 6개월 거래 추이를 한 번에 반환. 알림/거래 미리보기는 9번/5번 API 그대로 사용.</div>
+        <button class="a" onclick="getDashboardHome('A')">A 홈 대시보드</button>
+        <button class="b" onclick="getDashboardHome('B')">B 홈 대시보드</button>
     </section>
 </main>
 
@@ -489,7 +498,10 @@
 
     async function updateAccount(slot) {
         if (!requireToken(slot)) return;
-        const data = { account: val('updateAccountNumber') };
+        const data = {
+            bank: val('updateAccountBank'),
+            account: val('updateAccountNumber')
+        };
         const fd = new FormData();
         fd.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }));
         const bbInput = document.getElementById('updateBankbook');
@@ -502,6 +514,12 @@
         if (!requireToken(slot)) return;
         const body = { password: val('updatePasswordNew') };
         await api('PATCH', '/api/v1/users/me/password', { token: tokens[slot].accessToken, body });
+    }
+
+    // ============== 홈 대시보드 ==============
+    async function getDashboardHome(slot) {
+        if (!requireToken(slot)) return;
+        await api('GET', '/api/v1/dashboard/home', { token: tokens[slot].accessToken });
     }
 
     async function searchCompany(slot) {

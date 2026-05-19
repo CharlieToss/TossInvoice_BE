@@ -88,8 +88,9 @@ public class UserEntity extends BaseTimeEntity {
         this.bankbookUrl = bankbookUrl;
     }
 
-    // 계좌번호 변경 — 통장사본 OCR 1차 검증을 통과한 새 계좌번호와 통장사본 URL을 함께 갱신합니다.
-    public void updateAccount(String account, String bankbookUrl) {
+    // 계좌번호 변경 — 통장사본 OCR 1차 검증을 통과한 새 은행/계좌번호와 통장사본 URL을 함께 갱신합니다.
+    public void updateAccount(String bank, String account, String bankbookUrl) {
+        this.bank = bank;
         this.account = account;
         this.bankbookUrl = bankbookUrl;
     }
