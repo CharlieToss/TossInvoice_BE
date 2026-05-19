@@ -192,16 +192,22 @@ CREATE TABLE IF NOT EXISTS report (
 
 -- =============================================================================
 -- notifications : 알림 테이블
---   - trade_id : 거래 관련 알림이 아닌 경우 NULL
+--   - sender_id  : 발신자 (계좌변경 알림처럼 시스템 발송 시 NULL 가능)
+--   - receiver_id: 수신자
+--   - trade_id   : 거래 관련 알림이 아닌 경우 NULL
+--   - message    : 실제 노출 메시지 (발신자 이름 등 동적 값 포함)
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS notifications (
-    id                BIGINT      NOT NULL AUTO_INCREMENT,
-    user_id           BIGINT      NOT NULL,
-    trade_id          BIGINT      NULL,
-    notification_type VARCHAR(30) NOT NULL,
-    created_at        DATETIME(6) NULL,
+    id                BIGINT       NOT NULL AUTO_INCREMENT,
+    sender_id         BIGINT       NULL,
+    receiver_id       BIGINT       NOT NULL,
+    trade_id          BIGINT       NULL,
+    notification_type VARCHAR(30)  NOT NULL,
+    message           VARCHAR(255) NOT NULL,
+    created_at        DATETIME(6)  NULL,
     PRIMARY KEY (id),
-    KEY idx_notifications_user (user_id),
-    CONSTRAINT fk_notifications_user  FOREIGN KEY (user_id)  REFERENCES users (id) ON DELETE CASCADE,
-    CONSTRAINT fk_notifications_trade FOREIGN KEY (trade_id) REFERENCES trade (id) ON DELETE CASCADE
+    KEY idx_notifications_receiver (receiver_id),
+    CONSTRAINT fk_notifications_sender   FOREIGN KEY (sender_id)   REFERENCES users (id) ON DELETE SET NULL,
+    CONSTRAINT fk_notifications_receiver FOREIGN KEY (receiver_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_notifications_trade    FOREIGN KEY (trade_id)    REFERENCES trade (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;

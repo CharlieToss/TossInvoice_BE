@@ -18,19 +18,29 @@ public class NotificationService {
 
     @Transactional(readOnly = true)
     public List<NotificationResponse> getNotifications(Long userId) {
-        return notificationRepository.findTop5ByUserIdOrderByCreatedAtDesc(userId)
+        return notificationRepository.findTop5ByReceiverIdOrderByCreatedAtDesc(userId)
                 .stream()
                 .map(NotificationResponse::from)
                 .toList();
     }
 
     @Transactional
-    public void send(Long userId, Long tradeId, NotificationType type) {
-        NotificationEntity notification = NotificationEntity.builder()
-                .userId(userId)
+    public void send(Long senderId, Long receiverId, Long tradeId, NotificationType type) {
+        save(senderId, receiverId, tradeId, type, type.getMessage());
+    }
+
+    @Transactional
+    public void sendWithName(Long senderId, Long receiverId, Long tradeId, NotificationType type, String senderName) {
+        save(senderId, receiverId, tradeId, type, type.getMessageWith(senderName));
+    }
+
+    private void save(Long senderId, Long receiverId, Long tradeId, NotificationType type, String message) {
+        notificationRepository.save(NotificationEntity.builder()
+                .senderId(senderId)
+                .receiverId(receiverId)
                 .tradeId(tradeId)
                 .notificationType(type.name())
-                .build();
-        notificationRepository.save(notification);
+                .message(message)
+                .build());
     }
 }

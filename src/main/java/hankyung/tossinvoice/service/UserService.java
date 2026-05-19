@@ -94,15 +94,16 @@ public class UserService {
                 .orElseThrow(() -> BaseException.type(UserErrorCode.COMPANY_NOT_FOUND));
 
         user.updateAccount(request.account());
-        notifyPartners(userId, NotificationType.PARTNER_ACCOUNT_CHANGED);
+        notifyPartners(user, NotificationType.PARTNER_ACCOUNT_CHANGED);
     }
 
-    private void notifyPartners(Long userId, NotificationType type) {
-        Set<Long> partnerIds = tradeRepository.findActivePartnerTrades(userId, TradeStatus.CANCELLED)
+    private void notifyPartners(UserEntity sender, NotificationType type) {
+        Set<Long> partnerIds = tradeRepository.findActivePartnerTrades(sender.getId(), TradeStatus.CANCELLED)
                 .stream()
-                .map(t -> t.getSellerId().equals(userId) ? t.getBuyerId() : t.getSellerId())
+                .map(t -> t.getSellerId().equals(sender.getId()) ? t.getBuyerId() : t.getSellerId())
                 .collect(Collectors.toSet());
-        partnerIds.forEach(partnerId -> notificationService.send(partnerId, null, type));
+        partnerIds.forEach(partnerId ->
+                notificationService.sendWithName(sender.getId(), partnerId, null, type, sender.getCompanyName()));
     }
 
     // 비밀번호 변경 — 평문 비밀번호를 BCrypt로 해싱해 저장합니다.

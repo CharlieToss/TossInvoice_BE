@@ -22,8 +22,11 @@ public class NotificationEntity {
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @Column(name = "sender_id")
+    private Long senderId;
+
+    @Column(name = "receiver_id", nullable = false)
+    private Long receiverId;
 
     @Column(name = "trade_id")
     private Long tradeId;
@@ -31,15 +34,20 @@ public class NotificationEntity {
     @Column(name = "notification_type", length = 30, nullable = false)
     private String notificationType;
 
+    @Column(name = "message", length = 255, nullable = false)
+    private String message;
+
     @Column(name = "created_at", updatable = false)
     @CreatedDate
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Seoul")
     private LocalDateTime createdAt;
 
     @Builder
-    public NotificationEntity(Long userId, Long tradeId, String notificationType) {
-        this.userId = userId;
+    public NotificationEntity(Long senderId, Long receiverId, Long tradeId, String notificationType, String message) {
+        this.senderId = senderId;
+        this.receiverId = receiverId;
         this.tradeId = tradeId;
         this.notificationType = notificationType;
+        this.message = message;
     }
 }

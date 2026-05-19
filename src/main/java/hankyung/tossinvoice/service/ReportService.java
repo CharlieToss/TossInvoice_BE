@@ -62,7 +62,7 @@ public class ReportService {
         reportRepository.save(report);
 
         trade.changeStatus(TradeStatus.CANCELLED);
-        notificationService.send(reportedId, tradeId, NotificationType.REPORTED);
+        notificationService.send(userId, reportedId, tradeId, NotificationType.REPORTED);
     }
 
     // 2. 회사 정보를 조회할 때, Report테이블에서 해당 회사ID가 피신고자ID로 등록되어 있는 횟수를 확인하여, 쵯수에 맞게 결과를 반환해준다.

@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 @EnableJpaAuditing
 @SpringBootApplication
-public class TossinvoiceApplication {
+public class 	TossinvoiceApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(TossinvoiceApplication.class, args);
