@@ -7,9 +7,10 @@ import hankyung.tossinvoice.dto.trade.req.WriteInvoiceRequest;
 import hankyung.tossinvoice.dto.trade.req.WritePurchaseOrderRequest;
 import hankyung.tossinvoice.dto.trade.res.CreateTradeResponse;
 import hankyung.tossinvoice.dto.trade.res.TradeDetailResponse;
-import hankyung.tossinvoice.dto.trade.res.TradeListItemResponse;
+import hankyung.tossinvoice.dto.trade.res.TradePageResponse;
 import hankyung.tossinvoice.service.TradeService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -18,12 +19,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
-
+@Validated
 @RestController
 @RequiredArgsConstructor
 public class TradeController {
@@ -130,8 +132,12 @@ public class TradeController {
 
     // 호출자가 수주처/발주처로 참여한 모든 거래를 최신순으로 조회합니다.
     @GetMapping("/api/v1/trades")
-    public ResponseEntity<List<TradeListItemResponse>> listMyTrades(@UserId Long userId) {
-        return ResponseEntity.ok(tradeService.listMyTrades(userId));
+    public ResponseEntity<TradePageResponse> listMyTrades(
+            @UserId Long userId,
+            @Min(1) @RequestParam(defaultValue = "1") int page,
+            @Min(1) @RequestParam(defaultValue = "5") int size
+    ) {
+        return ResponseEntity.ok(tradeService.listMyTrades(userId, page, size));
     }
 
     // 거래 단건 상세를 호출자 시각(SELLER/BUYER 자동 판별)으로 반환합니다.

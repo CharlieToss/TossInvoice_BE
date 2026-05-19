@@ -18,6 +18,7 @@ import hankyung.tossinvoice.dto.trade.req.WritePurchaseOrderRequest;
 import hankyung.tossinvoice.dto.trade.res.CreateTradeResponse;
 import hankyung.tossinvoice.dto.trade.res.TradeDetailResponse;
 import hankyung.tossinvoice.dto.trade.res.TradeListItemResponse;
+import hankyung.tossinvoice.dto.trade.res.TradePageResponse;
 import hankyung.tossinvoice.global.exception.BaseException;
 import hankyung.tossinvoice.global.storage.StoragePort;
 import hankyung.tossinvoice.repository.InvoiceRepository;
@@ -28,6 +29,8 @@ import hankyung.tossinvoice.repository.TradeRepository;
 import hankyung.tossinvoice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -289,13 +292,20 @@ public class TradeService {
                 tradeId, trade.getSellerId(), seller.getAccount(), seller.getBank(), balanceAmount);
     }
 
-    // === 8. 거래 목록 ================================================================
+    // === 8. 거래 목록 (오프셋 페이지네이션, 1-based page) ==============================
     @Transactional(readOnly = true)
-    public List<TradeListItemResponse> listMyTrades(Long userId) {
-        List<TradeEntity> trades = tradeRepository.findBySellerIdOrBuyerIdOrderByIdDesc(userId, userId);
+    public TradePageResponse listMyTrades(Long userId, int page, int size) {
+        Page<TradeEntity> tradePage = tradeRepository.findBySellerIdOrBuyerIdOrderByIdDesc(
+                userId, userId, PageRequest.of(page - 1, size));
+        List<TradeEntity> trades = tradePage.getContent();
 
         if (trades.isEmpty()) {
-            return List.of();
+            return TradePageResponse.builder()
+                    .trades(List.of())
+                    .currentPage(page)
+                    .totalPages(tradePage.getTotalPages())
+                    .totalElements(tradePage.getTotalElements())
+                    .build();
         }
 
         // N+1 회피 — seller/buyer 양측, invoice, items를 거래 ID 묶음으로 한 번에 조회합니다.
@@ -314,7 +324,7 @@ public class TradeService {
         Map<Long, List<OrderItemEntity>> itemsMap = orderItemRepository.findByTradeIdIn(tradeIds).stream()
                 .collect(Collectors.groupingBy(OrderItemEntity::getTradeId));
 
-        return trades.stream()
+        List<TradeListItemResponse> tradeResponses = trades.stream()
                 .map(t -> {
                     boolean isSeller = userId.equals(t.getSellerId());
                     UserEntity seller = userMap.get(t.getSellerId());
@@ -336,6 +346,13 @@ public class TradeService {
                             .build();
                 })
                 .toList();
+
+        return TradePageResponse.builder()
+                .trades(tradeResponses)
+                .currentPage(page)
+                .totalPages(tradePage.getTotalPages())
+                .totalElements(tradePage.getTotalElements())
+                .build();
     }
 
     private TradeListItemResponse.CompanyMini toCompanyMini(UserEntity u) {

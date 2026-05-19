@@ -4,11 +4,14 @@ import hankyung.tossinvoice.domain.NotificationEntity;
 import hankyung.tossinvoice.domain.TradeEntity;
 import hankyung.tossinvoice.domain.UserEntity;
 import hankyung.tossinvoice.domain.constant.NotificationType;
+import hankyung.tossinvoice.dto.notification.res.NotificationPageResponse;
 import hankyung.tossinvoice.dto.notification.res.NotificationResponse;
 import hankyung.tossinvoice.repository.NotificationRepository;
 import hankyung.tossinvoice.repository.TradeRepository;
 import hankyung.tossinvoice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,9 +30,14 @@ public class NotificationService {
     private final TradeRepository tradeRepository;
 
     @Transactional(readOnly = true)
-    public List<NotificationResponse> getNotifications(Long userId) {
-        List<NotificationEntity> entities =
-                notificationRepository.findByReceiverIdOrderByCreatedAtDesc(userId);
+    public NotificationPageResponse getNotifications(Long userId, Long cursorId, int size) {
+        Pageable pageable = PageRequest.of(0, size + 1);
+        List<NotificationEntity> raw = cursorId == null
+                ? notificationRepository.findByReceiverIdOrderByIdDesc(userId, pageable)
+                : notificationRepository.findByReceiverIdAndIdLessThanOrderByIdDesc(userId, cursorId, pageable);
+
+        boolean hasNext = raw.size() > size;
+        List<NotificationEntity> entities = hasNext ? raw.subList(0, size) : raw;
 
         // N+1 방지: 알림에 등장한 senderId / tradeId를 모아 한 번에 fetch.
         Set<Long> senderIds = entities.stream()
@@ -50,7 +58,7 @@ public class NotificationService {
                 : tradeRepository.findAllById(tradeIds).stream()
                 .collect(Collectors.toMap(TradeEntity::getId, TradeEntity::getTotalAmount));
 
-        return entities.stream()
+        List<NotificationResponse> notifications = entities.stream()
                 .map(e -> NotificationResponse.builder()
                         .notificationId(e.getId())
                         .senderId(e.getSenderId())
@@ -63,6 +71,9 @@ public class NotificationService {
                         .createdAt(e.getCreatedAt())
                         .build())
                 .toList();
+
+        Long nextCursorId = hasNext ? entities.get(entities.size() - 1).getId() : null;
+        return new NotificationPageResponse(notifications, nextCursorId, hasNext);
     }
 
     @Transactional
