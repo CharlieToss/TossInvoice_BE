@@ -56,6 +56,14 @@ public class UserEntity extends BaseTimeEntity {
     @Column(name = "company_type", length = 20, nullable = false)
     private CompanyType companyType;
 
+    // 사업자등록증 PDF 원본 GCS URL — 회원가입 시 업로드되며 수정 불가.
+    @Column(name = "business_registration_url", length = 512, nullable = false)
+    private String businessRegistrationUrl;
+
+    // 통장사본 이미지 GCS URL — 회원가입 + 계좌번호 변경 시점에 갱신됩니다.
+    @Column(name = "bankbook_url", length = 512, nullable = false)
+    private String bankbookUrl;
+
     @Column(name = "deleted_at")
     private LocalDate deletedAt;
 
@@ -63,7 +71,8 @@ public class UserEntity extends BaseTimeEntity {
     public UserEntity(String companyName, String businessType, String businessNumber,
                       String ceoName, String account, String bank,
                       String email, String address, String phone,
-                      String passwordHash, CompanyType companyType) {
+                      String passwordHash, CompanyType companyType,
+                      String businessRegistrationUrl, String bankbookUrl) {
         this.companyName = companyName;
         this.businessType = businessType;
         this.businessNumber = businessNumber;
@@ -75,11 +84,14 @@ public class UserEntity extends BaseTimeEntity {
         this.phone = phone;
         this.passwordHash = passwordHash;
         this.companyType = companyType;
+        this.businessRegistrationUrl = businessRegistrationUrl;
+        this.bankbookUrl = bankbookUrl;
     }
 
-    // 계좌번호 변경 — 통장사본 OCR 1차 검증을 통과한 새 계좌번호로 갱신합니다.
-    public void updateAccount(String account) {
+    // 계좌번호 변경 — 통장사본 OCR 1차 검증을 통과한 새 계좌번호와 통장사본 URL을 함께 갱신합니다.
+    public void updateAccount(String account, String bankbookUrl) {
         this.account = account;
+        this.bankbookUrl = bankbookUrl;
     }
 
     // 비밀번호 변경 — BCrypt 해시값을 받아 저장합니다(평문은 서비스 레이어에서 해싱).

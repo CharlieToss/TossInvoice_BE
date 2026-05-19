@@ -150,6 +150,9 @@
                 <option value="CORPORATE">법인</option>
             </select>
         </div>
+        <div class="row"><label>사업자등록증(PDF)</label><input id="signupBusinessRegistration" type="file" accept="application/pdf"></div>
+        <div class="row"><label>통장사본(이미지)</label><input id="signupBankbook" type="file" accept="image/png,image/jpeg"></div>
+        <div class="note">파일을 선택하지 않으면 더미(1x1 PNG / 빈 PDF)가 자동 첨부됩니다.</div>
         <button class="neutral" onclick="signup()">회원가입 호출</button>
     </section>
 
@@ -289,6 +292,31 @@
         <button class="a" onclick="logout('A')">A 로그아웃</button>
         <button class="b" onclick="logout('B')">B 로그아웃</button>
     </section>
+
+    <!-- ============== 11. 마이페이지 ============== -->
+    <section class="full">
+        <h2>11-A. 마이페이지 조회</h2>
+        <div class="note">로그인된 슬롯의 회원정보 + 등록된 사업자등록증/통장사본 URL을 반환합니다.</div>
+        <button class="a" onclick="getMyPage('A')">A 마이페이지 조회</button>
+        <button class="b" onclick="getMyPage('B')">B 마이페이지 조회</button>
+    </section>
+
+    <section>
+        <h2>11-B. 계좌번호 변경</h2>
+        <div class="note">새 통장사본 이미지 + 새 계좌번호를 multipart로 전송. 파일 비우면 더미 PNG 자동 첨부.</div>
+        <div class="row"><label>새 계좌번호</label><input id="updateAccountNumber" value="110-999-888777"></div>
+        <div class="row"><label>새 통장사본</label><input id="updateBankbook" type="file" accept="image/png,image/jpeg"></div>
+        <button class="a" onclick="updateAccount('A')">A 계좌 변경</button>
+        <button class="b" onclick="updateAccount('B')">B 계좌 변경</button>
+    </section>
+
+    <section>
+        <h2>11-C. 비밀번호 변경</h2>
+        <div class="note">새 비밀번호 평문을 보내면 서버에서 BCrypt 해싱 후 저장합니다.</div>
+        <div class="row"><label>새 비밀번호</label><input id="updatePasswordNew" value="newpassword123"></div>
+        <button class="a" onclick="updatePassword('A')">A 비번 변경</button>
+        <button class="b" onclick="updatePassword('B')">B 비번 변경</button>
+    </section>
 </main>
 
 <aside>
@@ -373,6 +401,12 @@
         return new Blob([bytes], { type: 'image/png' });
     }
 
+    // 최소 PDF 헤더만 든 더미. 실제 GCS 업로드 검증용일 뿐 OCR 대상 아님.
+    function dummyPdfBlob() {
+        const pdf = '%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n';
+        return new Blob([pdf], { type: 'application/pdf' });
+    }
+
     // ============== 로그 ==============
     function log({ method, path, status, body, error }) {
         const div = document.createElement('div');
@@ -387,7 +421,7 @@
     // ============== API 호출 함수들 ==============
     let signupCount = 0;
     async function signup() {
-        const body = {
+        const data = {
             companyName: val('signupCompanyName'),
             businessType: val('signupBusinessType'),
             businessNumber: val('signupBusinessNumber'),
@@ -400,7 +434,15 @@
             password: val('signupPassword'),
             companyType: val('signupCompanyType')
         };
-        const r = await api('POST', '/api/v1/auth/signup', { body });
+        const fd = new FormData();
+        fd.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }));
+        const brInput = document.getElementById('signupBusinessRegistration');
+        const bbInput = document.getElementById('signupBankbook');
+        if (brInput.files[0]) fd.append('businessRegistration', brInput.files[0]);
+        else fd.append('businessRegistration', dummyPdfBlob(), 'business-registration.pdf');
+        if (bbInput.files[0]) fd.append('bankbook', bbInput.files[0]);
+        else fd.append('bankbook', dummySignatureBlob(), 'bankbook.png');
+        const r = await api('POST', '/api/v1/auth/signup', { formData: fd });
         if (r && r.status === 201) {
             signupCount++;
             // 한 번 가입 후엔 두 번째 회사 프리셋으로 자동 교체.
@@ -437,6 +479,29 @@
         if (!requireToken(slot)) return;
         await api('POST', '/api/v1/auth/logout', { token: tokens[slot].accessToken });
         saveToken(slot, null);
+    }
+
+    // ============== 마이페이지 ==============
+    async function getMyPage(slot) {
+        if (!requireToken(slot)) return;
+        await api('GET', '/api/v1/users/me', { token: tokens[slot].accessToken });
+    }
+
+    async function updateAccount(slot) {
+        if (!requireToken(slot)) return;
+        const data = { account: val('updateAccountNumber') };
+        const fd = new FormData();
+        fd.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }));
+        const bbInput = document.getElementById('updateBankbook');
+        if (bbInput.files[0]) fd.append('bankbook', bbInput.files[0]);
+        else fd.append('bankbook', dummySignatureBlob(), 'bankbook.png');
+        await api('PATCH', '/api/v1/users/me/account', { token: tokens[slot].accessToken, formData: fd });
+    }
+
+    async function updatePassword(slot) {
+        if (!requireToken(slot)) return;
+        const body = { password: val('updatePasswordNew') };
+        await api('PATCH', '/api/v1/users/me/password', { token: tokens[slot].accessToken, body });
     }
 
     async function searchCompany(slot) {

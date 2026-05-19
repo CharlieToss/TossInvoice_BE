@@ -11,6 +11,7 @@ import hankyung.tossinvoice.dto.auth.res.JwtTokenResponse;
 import hankyung.tossinvoice.dto.auth.res.SignupResponse;
 import hankyung.tossinvoice.global.exception.BaseException;
 import hankyung.tossinvoice.global.exception.GlobalErrorCode;
+import hankyung.tossinvoice.global.storage.StoragePort;
 import hankyung.tossinvoice.repository.RefreshTokenRepository;
 import hankyung.tossinvoice.repository.UserRepository;
 import hankyung.tossinvoice.security.jwt.JwtUtil;
@@ -19,20 +20,27 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+    // 회원가입 시 사업자등록증은 PDF만, 통장사본은 이미지(jpeg/png)만 허용합니다.
+    private static final Set<String> BUSINESS_REGISTRATION_ALLOWED_TYPES = Set.of("application/pdf");
+    private static final Set<String> BANKBOOK_ALLOWED_TYPES = Set.of("image/jpeg", "image/png");
+
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final StoragePort storagePort;
 
     @Transactional
-    public SignupResponse signup(SignupRequest request) {
+    public SignupResponse signup(SignupRequest request, MultipartFile businessRegistration, MultipartFile bankbook) {
         // 이메일/사업자번호는 unique 컬럼이라 가입 전에 중복 여부를 먼저 검사합니다.
         if (userRepository.existsByEmail(request.email())) {
             throw BaseException.type(AuthErrorCode.EMAIL_DUPLICATED);
@@ -40,6 +48,12 @@ public class AuthService {
         if (userRepository.existsByBusinessNumber(request.businessNumber())) {
             throw BaseException.type(AuthErrorCode.BUSINESS_NUMBER_DUPLICATED);
         }
+
+        // 중복 검사 이후에 파일 업로드를 수행해 불필요한 GCS 비용을 줄입니다.
+        String businessRegistrationUrl = storagePort.upload(
+                businessRegistration, "users/business-registration", BUSINESS_REGISTRATION_ALLOWED_TYPES);
+        String bankbookUrl = storagePort.upload(
+                bankbook, "users/bankbook", BANKBOOK_ALLOWED_TYPES);
 
         // 비밀번호 평문은 BCrypt로 해싱해 DB에는 해시값만 보관합니다.
         String passwordHash = passwordEncoder.encode(request.password());
@@ -56,6 +70,8 @@ public class AuthService {
                 .phone(request.phone())
                 .passwordHash(passwordHash)
                 .companyType(request.companyType())
+                .businessRegistrationUrl(businessRegistrationUrl)
+                .bankbookUrl(bankbookUrl)
                 .build();
 
         UserEntity saved = userRepository.save(user);
