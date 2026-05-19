@@ -205,7 +205,22 @@
 
     <!-- ============== 5. 거래 목록 / 단건 ============== -->
     <section>
-        <h2>5-A. 거래 목록</h2>
+        <h2>5-A. 거래 목록 (role × phase 4분할)</h2>
+        <div class="note">응답에 거래처 KPI (`totalPartners` / `activePartners` / `newPartnersThisMonth`)도 함께 포함됨.</div>
+        <div class="row"><label>role</label>
+            <select id="listRole">
+                <option value="SELLER">SELLER (수주)</option>
+                <option value="BUYER">BUYER (발주)</option>
+            </select>
+        </div>
+        <div class="row"><label>phase</label>
+            <select id="listPhase">
+                <option value="ACTIVE">ACTIVE (거래중)</option>
+                <option value="COMPLETED">COMPLETED (완료)</option>
+            </select>
+        </div>
+        <div class="row"><label>page</label><input id="listPage" type="number" value="1"></div>
+        <div class="row"><label>size</label><input id="listSize" type="number" value="5"></div>
         <button class="a" onclick="listTrades('A')">A의 거래 목록</button>
         <button class="b" onclick="listTrades('B')">B의 거래 목록</button>
     </section>
@@ -550,7 +565,12 @@
 
     async function listTrades(slot) {
         if (!requireToken(slot)) return;
-        await api('GET', '/api/v1/trades', { token: tokens[slot].accessToken });
+        const role = val('listRole');
+        const phase = val('listPhase');
+        const page = val('listPage') || 1;
+        const size = val('listSize') || 5;
+        const qs = `?role=${role}&phase=${phase}&page=${page}&size=${size}`;
+        await api('GET', `/api/v1/trades${qs}`, { token: tokens[slot].accessToken });
     }
 
     async function getTrade(slot) {

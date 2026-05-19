@@ -13,6 +13,8 @@ import hankyung.tossinvoice.domain.exception.UserErrorCode;
 import hankyung.tossinvoice.dto.trade.req.CreateTradeRequest;
 import hankyung.tossinvoice.dto.trade.req.OrderItemRequest;
 import hankyung.tossinvoice.dto.trade.req.SignPurchaseOrderRequest;
+import hankyung.tossinvoice.dto.trade.req.TradePhase;
+import hankyung.tossinvoice.dto.trade.req.TradeRole;
 import hankyung.tossinvoice.dto.trade.req.WriteInvoiceRequest;
 import hankyung.tossinvoice.dto.trade.req.WritePurchaseOrderRequest;
 import hankyung.tossinvoice.dto.trade.res.CreateTradeResponse;
@@ -39,10 +41,13 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -293,11 +298,17 @@ public class TradeService {
     }
 
     // === 8. 거래 목록 (오프셋 페이지네이션, 1-based page) ==============================
+    // role(SELLER/BUYER) × phase(ACTIVE/COMPLETED) 4분할 필터.
+    // 화면 02-A "거래중" 탭은 ACTIVE, 02-CD "완료거래" 탭은 COMPLETED. CANCELLED는 어느 탭에도 노출하지 않습니다.
+    private static final Set<TradeStatus> TERMINAL_STATUSES_FOR_LIST =
+            Set.of(TradeStatus.COMPLETED, TradeStatus.CANCELLED);
+
     @Transactional(readOnly = true)
-    public TradePageResponse listMyTrades(Long userId, int page, int size) {
-        Page<TradeEntity> tradePage = tradeRepository.findBySellerIdOrBuyerIdOrderByIdDesc(
-                userId, userId, PageRequest.of(page - 1, size));
+    public TradePageResponse listMyTrades(Long userId, TradeRole role, TradePhase phase, int page, int size) {
+        PageRequest pageable = PageRequest.of(page - 1, size);
+        Page<TradeEntity> tradePage = fetchTradePage(userId, role, phase, pageable);
         List<TradeEntity> trades = tradePage.getContent();
+        PartnerKpi kpi = calcPartnerKpi(userId);
 
         if (trades.isEmpty()) {
             return TradePageResponse.builder()
@@ -305,6 +316,9 @@ public class TradeService {
                     .currentPage(page)
                     .totalPages(tradePage.getTotalPages())
                     .totalElements(tradePage.getTotalElements())
+                    .totalPartners(kpi.total)
+                    .activePartners(kpi.active)
+                    .newPartnersThisMonth(kpi.newThisMonth)
                     .build();
         }
 
@@ -352,7 +366,53 @@ public class TradeService {
                 .currentPage(page)
                 .totalPages(tradePage.getTotalPages())
                 .totalElements(tradePage.getTotalElements())
+                .totalPartners(kpi.total)
+                .activePartners(kpi.active)
+                .newPartnersThisMonth(kpi.newThisMonth)
                 .build();
+    }
+
+    // 거래 관리 페이지 상단 KPI 산출 — 페이지네이션 무관, CANCELLED 거래는 모든 집계에서 제외합니다.
+    private PartnerKpi calcPartnerKpi(Long userId) {
+        List<TradeEntity> trades = tradeRepository.findAllByUserExcludingStatus(userId, TradeStatus.CANCELLED);
+
+        Map<Long, List<TradeEntity>> tradesByPartner = trades.stream()
+                .collect(Collectors.groupingBy(t ->
+                        t.getSellerId().equals(userId) ? t.getBuyerId() : t.getSellerId()));
+
+        long total = tradesByPartner.size();
+        long active = tradesByPartner.values().stream()
+                .filter(list -> list.stream().anyMatch(t -> t.getStatus() != TradeStatus.COMPLETED))
+                .count();
+
+        LocalDateTime thisMonthStart = LocalDate.now(ZoneId.of("Asia/Seoul"))
+                .withDayOfMonth(1).atStartOfDay();
+        LocalDateTime nextMonthStart = thisMonthStart.plusMonths(1);
+        long newThisMonth = tradesByPartner.values().stream()
+                .map(list -> list.stream()
+                        .map(TradeEntity::getCreatedAt)
+                        .min(Comparator.naturalOrder())
+                        .orElse(null))
+                .filter(first -> first != null
+                        && !first.isBefore(thisMonthStart)
+                        && first.isBefore(nextMonthStart))
+                .count();
+
+        return new PartnerKpi(total, active, newThisMonth);
+    }
+
+    private record PartnerKpi(long total, long active, long newThisMonth) {
+    }
+
+    private Page<TradeEntity> fetchTradePage(Long userId, TradeRole role, TradePhase phase, PageRequest pageable) {
+        if (role == TradeRole.SELLER) {
+            return phase == TradePhase.ACTIVE
+                    ? tradeRepository.findBySellerIdAndStatusNotInOrderByIdDesc(userId, TERMINAL_STATUSES_FOR_LIST, pageable)
+                    : tradeRepository.findBySellerIdAndStatusOrderByIdDesc(userId, TradeStatus.COMPLETED, pageable);
+        }
+        return phase == TradePhase.ACTIVE
+                ? tradeRepository.findByBuyerIdAndStatusNotInOrderByIdDesc(userId, TERMINAL_STATUSES_FOR_LIST, pageable)
+                : tradeRepository.findByBuyerIdAndStatusOrderByIdDesc(userId, TradeStatus.COMPLETED, pageable);
     }
 
     private TradeListItemResponse.CompanyMini toCompanyMini(UserEntity u) {

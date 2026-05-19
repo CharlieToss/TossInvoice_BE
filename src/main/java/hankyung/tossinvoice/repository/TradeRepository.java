@@ -17,6 +17,26 @@ public interface TradeRepository extends JpaRepository<TradeEntity, Long> {
     // 내가 수주처 또는 발주처로 참여한 모든 거래를 최신순으로 조회합니다 (페이지네이션).
     Page<TradeEntity> findBySellerIdOrBuyerIdOrderByIdDesc(Long sellerId, Long buyerId, Pageable pageable);
 
+    // --- 02-A "거래중" / 02-CD "완료거래" 4분할 필터 ---
+    //   role × phase 조합에 맞춰 직접 매핑된 4개 메서드. JPQL 한 줄로 묶지 않고 분리한 이유는
+    //   파라미터 바인딩 시 TradeStatus 비교가 분기되어 단순화 효과가 없기 때문.
+
+    // 거래중 + 수주
+    Page<TradeEntity> findBySellerIdAndStatusNotInOrderByIdDesc(
+            Long sellerId, Collection<TradeStatus> excluded, Pageable pageable);
+
+    // 완료 + 수주
+    Page<TradeEntity> findBySellerIdAndStatusOrderByIdDesc(
+            Long sellerId, TradeStatus status, Pageable pageable);
+
+    // 거래중 + 발주
+    Page<TradeEntity> findByBuyerIdAndStatusNotInOrderByIdDesc(
+            Long buyerId, Collection<TradeStatus> excluded, Pageable pageable);
+
+    // 완료 + 발주
+    Page<TradeEntity> findByBuyerIdAndStatusOrderByIdDesc(
+            Long buyerId, TradeStatus status, Pageable pageable);
+
     // 특정 상태를 제외한 거래 파트너 조회 (알림 발송 대상 산출용)
     @Query("SELECT t FROM TradeEntity t WHERE (t.sellerId = :userId OR t.buyerId = :userId) AND t.status != :status")
     List<TradeEntity> findActivePartnerTrades(@Param("userId") Long userId, @Param("status") TradeStatus status);
@@ -51,4 +71,10 @@ public interface TradeRepository extends JpaRepository<TradeEntity, Long> {
             "AND t.totalAmount IS NOT NULL AND t.createdAt >= :start")
     List<TradeEntity> findForMonthlyTrend(@Param("userId") Long userId,
                                           @Param("start") LocalDateTime start);
+
+    // 거래처 KPI 산출용 — 본인이 참여한 모든 거래(특정 status 제외) raw 조회. 집계는 서비스 레이어.
+    @Query("SELECT t FROM TradeEntity t WHERE (t.sellerId = :userId OR t.buyerId = :userId) " +
+            "AND t.status != :excluded")
+    List<TradeEntity> findAllByUserExcludingStatus(@Param("userId") Long userId,
+                                                   @Param("excluded") TradeStatus excluded);
 }

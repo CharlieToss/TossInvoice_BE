@@ -3,6 +3,8 @@ package hankyung.tossinvoice.controller;
 import hankyung.tossinvoice.controller.support.annotation.UserId;
 import hankyung.tossinvoice.dto.trade.req.CreateTradeRequest;
 import hankyung.tossinvoice.dto.trade.req.SignPurchaseOrderRequest;
+import hankyung.tossinvoice.dto.trade.req.TradePhase;
+import hankyung.tossinvoice.dto.trade.req.TradeRole;
 import hankyung.tossinvoice.dto.trade.req.WriteInvoiceRequest;
 import hankyung.tossinvoice.dto.trade.req.WritePurchaseOrderRequest;
 import hankyung.tossinvoice.dto.trade.res.CreateTradeResponse;
@@ -130,14 +132,17 @@ public class TradeController {
         return ResponseEntity.noContent().build();
     }
 
-    // 호출자가 수주처/발주처로 참여한 모든 거래를 최신순으로 조회합니다.
+    // 호출자의 거래 목록을 role(수주/발주) × phase(거래중/완료) 4분할로 조회합니다 (최신순, 오프셋 페이지네이션).
+    // 응답에는 화면 02-A/02-CD 상단 KPI (`totalPartners` / `activePartners` / `newPartnersThisMonth`)도 함께 포함됩니다.
     @GetMapping("/api/v1/trades")
     public ResponseEntity<TradePageResponse> listMyTrades(
             @UserId Long userId,
+            @RequestParam TradeRole role,
+            @RequestParam TradePhase phase,
             @Min(1) @RequestParam(defaultValue = "1") int page,
             @Min(1) @RequestParam(defaultValue = "5") int size
     ) {
-        return ResponseEntity.ok(tradeService.listMyTrades(userId, page, size));
+        return ResponseEntity.ok(tradeService.listMyTrades(userId, role, phase, page, size));
     }
 
     // 거래 단건 상세를 호출자 시각(SELLER/BUYER 자동 판별)으로 반환합니다.
