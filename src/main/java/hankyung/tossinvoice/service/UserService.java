@@ -10,6 +10,7 @@ import hankyung.tossinvoice.dto.user.req.UpdatePasswordRequest;
 import hankyung.tossinvoice.dto.user.res.CompanySearchResponse;
 import hankyung.tossinvoice.dto.user.res.MyPageResponse;
 import hankyung.tossinvoice.global.exception.BaseException;
+import hankyung.tossinvoice.global.storage.StoragePort;
 import hankyung.tossinvoice.repository.ReportRepository;
 import hankyung.tossinvoice.repository.TradeRepository;
 import hankyung.tossinvoice.repository.UserRepository;
@@ -18,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -26,11 +28,15 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class UserService {
+    // 계좌번호 변경 시 통장사본 이미지는 jpeg/png만 허용합니다.
+    private static final Set<String> BANKBOOK_ALLOWED_TYPES = Set.of("image/jpeg", "image/png");
+
     private final UserRepository userRepository;
     private final ReportRepository reportRepository;
     private final TradeRepository tradeRepository;
     private final NotificationService notificationService;
     private final PasswordEncoder passwordEncoder;
+    private final StoragePort storagePort;
 
     @Transactional(readOnly = true)
     public CompanySearchResponse findByBusinessNumber(String businessNumber) {
@@ -84,16 +90,20 @@ public class UserService {
                 .address(user.getAddress())
                 .bank(user.getBank())
                 .account(user.getAccount())
+                .businessRegistrationUrl(user.getBusinessRegistrationUrl())
+                .bankbookUrl(user.getBankbookUrl())
                 .build();
     }
 
-    // 계좌번호 변경 — 클라가 OCR 1차 검증을 통과한 후 호출. 서버는 받은 계좌번호로 갱신만.
+    // 계좌번호 변경 — 새 통장사본 이미지를 GCS에 업로드하고 계좌번호 + 통장사본 URL을 함께 갱신합니다.
+    // OCR 1차 검증은 클라이언트가 통과한 뒤 호출되므로 서버는 받은 값을 신뢰합니다.
     @Transactional
-    public void updateAccount(Long userId, UpdateAccountRequest request) {
+    public void updateAccount(Long userId, UpdateAccountRequest request, MultipartFile bankbook) {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> BaseException.type(UserErrorCode.COMPANY_NOT_FOUND));
 
-        user.updateAccount(request.account());
+        String bankbookUrl = storagePort.upload(bankbook, "users/bankbook", BANKBOOK_ALLOWED_TYPES);
+        user.updateAccount(request.account(), bankbookUrl);
         notifyPartners(user, NotificationType.PARTNER_ACCOUNT_CHANGED);
     }
 

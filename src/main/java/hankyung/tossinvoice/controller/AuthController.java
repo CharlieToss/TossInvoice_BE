@@ -10,20 +10,30 @@ import hankyung.tossinvoice.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequiredArgsConstructor
 public class AuthController {
     private final AuthService authService;
 
-    // 신규 회원가입 요청을 처리하고 생성된 사용자 ID를 반환합니다.
-    @PostMapping("/api/v1/auth/signup")
-    public ResponseEntity<SignupResponse> signup(@Valid @RequestBody SignupRequest request) {
-        SignupResponse response = authService.signup(request);
+    // 신규 회원가입 요청을 multipart/form-data로 받습니다.
+    //   - data                 : SignupRequest JSON
+    //   - businessRegistration : 사업자등록증 PDF
+    //   - bankbook             : 통장사본 이미지
+    @PostMapping(value = "/api/v1/auth/signup", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<SignupResponse> signup(
+            @Valid @RequestPart("data") SignupRequest request,
+            @RequestPart("businessRegistration") MultipartFile businessRegistration,
+            @RequestPart("bankbook") MultipartFile bankbook
+    ) {
+        SignupResponse response = authService.signup(request, businessRegistration, bankbook);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)

@@ -9,21 +9,23 @@
 --   - email, business_number는 unique
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS users (
-    id              BIGINT       NOT NULL AUTO_INCREMENT,
-    company_name    VARCHAR(100) NOT NULL,
-    business_type   VARCHAR(20)  NOT NULL,
-    business_number VARCHAR(20)  NOT NULL,
-    ceo_name        VARCHAR(20)  NOT NULL,
-    account         VARCHAR(20)  NOT NULL,
-    bank            VARCHAR(20)  NOT NULL,
-    email           VARCHAR(100) NOT NULL,
-    address         VARCHAR(200) NOT NULL,
-    phone           VARCHAR(20)  NOT NULL,
-    password_hash   VARCHAR(255) NOT NULL,
-    deleted_at      DATE         NULL,
-    company_type    VARCHAR(20)  NOT NULL,
-    created_at      DATETIME(6)  NULL,
-    modified_at     DATETIME(6)  NULL,
+    id                        BIGINT       NOT NULL AUTO_INCREMENT,
+    company_name              VARCHAR(100) NOT NULL,
+    business_type             VARCHAR(20)  NOT NULL,
+    business_number           VARCHAR(20)  NOT NULL,
+    ceo_name                  VARCHAR(20)  NOT NULL,
+    account                   VARCHAR(20)  NOT NULL,
+    bank                      VARCHAR(20)  NOT NULL,
+    email                     VARCHAR(100) NOT NULL,
+    address                   VARCHAR(200) NOT NULL,
+    phone                     VARCHAR(20)  NOT NULL,
+    password_hash             VARCHAR(255) NOT NULL,
+    business_registration_url VARCHAR(512) NOT NULL,
+    bankbook_url              VARCHAR(512) NOT NULL,
+    deleted_at                DATE         NULL,
+    company_type              VARCHAR(20)  NOT NULL,
+    created_at                DATETIME(6)  NULL,
+    modified_at               DATETIME(6)  NULL,
     PRIMARY KEY (id),
     UNIQUE KEY uk_users_business_number (business_number),
     UNIQUE KEY uk_users_email (email)
@@ -211,3 +213,8 @@ CREATE TABLE IF NOT EXISTS notifications (
     CONSTRAINT fk_notifications_receiver FOREIGN KEY (receiver_id) REFERENCES users (id) ON DELETE CASCADE,
     CONSTRAINT fk_notifications_trade    FOREIGN KEY (trade_id)    REFERENCES trade (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+
+ALTER TABLE users
+    ADD COLUMN business_registration_url VARCHAR(512) NULL AFTER password_hash,
+    ADD COLUMN bankbook_url              VARCHAR(512) NULL AFTER business_registration_url;

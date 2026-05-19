@@ -8,12 +8,15 @@ import hankyung.tossinvoice.dto.user.res.MyPageResponse;
 import hankyung.tossinvoice.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequiredArgsConstructor
@@ -36,13 +39,16 @@ public class UserController {
         return ResponseEntity.ok(userService.getMyPage(userId));
     }
 
-    // 계좌번호 변경 — 클라가 통장사본 OCR 1차 검증 통과 후 호출.
-    @PatchMapping("/api/v1/users/me/account")
+    // 계좌번호 변경 — multipart/form-data로 통장사본 이미지 + 새 계좌번호를 함께 받습니다.
+    //   - data     : UpdateAccountRequest JSON (account)
+    //   - bankbook : 새 통장사본 이미지
+    @PatchMapping(value = "/api/v1/users/me/account", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> updateAccount(
             @UserId Long userId,
-            @Valid @RequestBody UpdateAccountRequest request
+            @Valid @RequestPart("data") UpdateAccountRequest request,
+            @RequestPart("bankbook") MultipartFile bankbook
     ) {
-        userService.updateAccount(userId, request);
+        userService.updateAccount(userId, request, bankbook);
         return ResponseEntity.noContent().build();
     }
 
