@@ -18,7 +18,7 @@ public class NotificationService {
 
     @Transactional(readOnly = true)
     public List<NotificationResponse> getNotifications(Long userId) {
-        return notificationRepository.findTop5ByReceiverIdOrderByCreatedAtDesc(userId)
+        return notificationRepository.findByReceiverIdOrderByCreatedAtDesc(userId)
                 .stream()
                 .map(NotificationResponse::from)
                 .toList();
@@ -30,8 +30,8 @@ public class NotificationService {
     }
 
     @Transactional
-    public void sendWithName(Long senderId, Long receiverId, Long tradeId, NotificationType type, String senderName) {
-        save(senderId, receiverId, tradeId, type, type.getMessageWith(senderName));
+    public void sendWithName(Long senderId, Long receiverId, Long tradeId, NotificationType type, Object... args) {
+        save(senderId, receiverId, tradeId, type, type.getMessageWith(args));
     }
 
     private void save(Long senderId, Long receiverId, Long tradeId, NotificationType type, String message) {

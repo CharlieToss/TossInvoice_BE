@@ -9,7 +9,7 @@ public enum NotificationType {
     TRADE_COMPLETED("거래가 완료되었습니다. 잔금이 입금될 예정입니다."),
     TRADE_CANCELLED("거래가 취소되었습니다."),
     REPORTED("신고가 접수되어 거래가 취소되었습니다."),
-    PARTNER_ACCOUNT_CHANGED("%s의 계좌번호가 변경되었습니다. 확인해 주세요.");
+    PARTNER_ACCOUNT_CHANGED("%s의 계좌번호가 %s로 변경되었습니다. 확인해 주세요.");
 
     private final String message;
 
@@ -21,7 +21,7 @@ public enum NotificationType {
         return message;
     }
 
-    public String getMessageWith(String senderName) {
-        return String.format(message, senderName);
+    public String getMessageWith(Object... args) {
+        return String.format(message, args);
     }
 }

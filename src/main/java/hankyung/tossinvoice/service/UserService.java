@@ -98,12 +98,20 @@ public class UserService {
     }
 
     private void notifyPartners(UserEntity sender, NotificationType type) {
+        String maskedAccount = maskAccount(sender.getAccount());
         Set<Long> partnerIds = tradeRepository.findActivePartnerTrades(sender.getId(), TradeStatus.CANCELLED)
                 .stream()
                 .map(t -> t.getSellerId().equals(sender.getId()) ? t.getBuyerId() : t.getSellerId())
                 .collect(Collectors.toSet());
         partnerIds.forEach(partnerId ->
-                notificationService.sendWithName(sender.getId(), partnerId, null, type, sender.getCompanyName()));
+                notificationService.sendWithName(sender.getId(), partnerId, null, type, sender.getCompanyName(), maskedAccount));
+    }
+
+    private static String maskAccount(String account) {
+        if (account == null) return "****";
+        String digits = account.replaceAll("[^0-9]", "");
+        if (digits.length() <= 8) return "****";
+        return digits.substring(0, 4) + "****" + digits.substring(digits.length() - 4);
     }
 
     // 비밀번호 변경 — 평문 비밀번호를 BCrypt로 해싱해 저장합니다.
