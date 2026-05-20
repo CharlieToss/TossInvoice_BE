@@ -6,14 +6,19 @@ import hankyung.tossinvoice.domain.UserEntity;
 import hankyung.tossinvoice.domain.constant.NotificationType;
 import hankyung.tossinvoice.dto.notification.res.NotificationPageResponse;
 import hankyung.tossinvoice.dto.notification.res.NotificationResponse;
+import hankyung.tossinvoice.global.event.NotificationEvent;
 import hankyung.tossinvoice.repository.NotificationRepository;
 import hankyung.tossinvoice.repository.TradeRepository;
 import hankyung.tossinvoice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.List;
 import java.util.Map;
@@ -21,6 +26,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
@@ -76,14 +82,18 @@ public class NotificationService {
         return new NotificationPageResponse(notifications, nextCursorId, hasNext);
     }
 
-    @Transactional
-    public void send(Long senderId, Long receiverId, Long tradeId, NotificationType type) {
-        save(senderId, receiverId, tradeId, type, type.getMessage());
-    }
-
-    @Transactional
-    public void sendWithName(Long senderId, Long receiverId, Long tradeId, NotificationType type, Object... args) {
-        save(senderId, receiverId, tradeId, type, type.getMessageWith(args));
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void handleNotificationEvent(NotificationEvent event) {
+        try {
+            String message = event.args() == null
+                    ? event.type().getMessage()
+                    : event.type().getMessageWith(event.args());
+            save(event.senderId(), event.receiverId(), event.tradeId(), event.type(), message);
+        } catch (Exception e) {
+            log.warn("[Notification] 알림 발송 실패. senderId={} receiverId={} tradeId={} type={} error={}",
+                    event.senderId(), event.receiverId(), event.tradeId(), event.type(), e.getMessage());
+        }
     }
 
     private void save(Long senderId, Long receiverId, Long tradeId, NotificationType type, String message) {

@@ -4,6 +4,7 @@ import hankyung.tossinvoice.domain.ReportEntity;
 import hankyung.tossinvoice.domain.TradeEntity;
 import hankyung.tossinvoice.domain.constant.NotificationType;
 import hankyung.tossinvoice.domain.constant.TradeStatus;
+import hankyung.tossinvoice.global.event.NotificationEvent;
 import hankyung.tossinvoice.domain.exception.ReportErrorCode;
 import hankyung.tossinvoice.domain.exception.TradeErrorCode;
 import hankyung.tossinvoice.global.exception.BaseException;
@@ -11,6 +12,7 @@ import hankyung.tossinvoice.repository.ReportRepository;
 import hankyung.tossinvoice.repository.TradeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,7 +23,7 @@ public class ReportService {
 
     private final ReportRepository reportRepository;
     private final TradeRepository tradeRepository;
-    private final NotificationService notificationService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /*
     1. 신고버튼을 누르면 거래ID, 피신고자ID를 받아오고 Report테이블에 등록하고, 거래 상태를 cancel로 변경.
@@ -62,7 +64,7 @@ public class ReportService {
         reportRepository.save(report);
 
         trade.changeStatus(TradeStatus.CANCELLED);
-        notificationService.send(userId, reportedId, tradeId, NotificationType.REPORTED);
+        eventPublisher.publishEvent(NotificationEvent.of(userId, reportedId, tradeId, NotificationType.REPORTED));
     }
 
     // 2. 회사 정보를 조회할 때, Report테이블에서 해당 회사ID가 피신고자ID로 등록되어 있는 횟수를 확인하여, 쵯수에 맞게 결과를 반환해준다.

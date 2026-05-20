@@ -4,6 +4,7 @@ import hankyung.tossinvoice.domain.TradeEntity;
 import hankyung.tossinvoice.domain.UserEntity;
 import hankyung.tossinvoice.domain.constant.NotificationType;
 import hankyung.tossinvoice.domain.constant.TradeStatus;
+import hankyung.tossinvoice.global.event.NotificationEvent;
 import hankyung.tossinvoice.domain.exception.UserErrorCode;
 import hankyung.tossinvoice.dto.user.req.UpdateAccountRequest;
 import hankyung.tossinvoice.dto.user.req.UpdatePasswordRequest;
@@ -16,6 +17,7 @@ import hankyung.tossinvoice.repository.TradeRepository;
 import hankyung.tossinvoice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,7 +36,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final ReportRepository reportRepository;
     private final TradeRepository tradeRepository;
-    private final NotificationService notificationService;
+    private final ApplicationEventPublisher eventPublisher;
     private final PasswordEncoder passwordEncoder;
     private final StoragePort storagePort;
 
@@ -114,7 +116,7 @@ public class UserService {
                 .map(t -> t.getSellerId().equals(sender.getId()) ? t.getBuyerId() : t.getSellerId())
                 .collect(Collectors.toSet());
         partnerIds.forEach(partnerId ->
-                notificationService.sendWithName(sender.getId(), partnerId, null, type, sender.getCompanyName(), maskedAccount));
+                eventPublisher.publishEvent(NotificationEvent.withArgs(sender.getId(), partnerId, null, type, sender.getCompanyName(), maskedAccount)));
     }
 
     private static String maskAccount(String account) {

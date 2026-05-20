@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\User\\\\Desktop\\\\TossInvoice_BE\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)",
+      "Bash(Head -50)",
+      "PowerShell(ls -Path \"C:\\\\Users\\\\User\\\\Desktop\\\\TossInvoice_BE\" | Where-Object {$_.PSIsContainer -eq $false})"
+    ]
+  }
+}
