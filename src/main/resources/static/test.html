@@ -540,7 +540,7 @@
     async function searchCompany(slot) {
         if (!requireToken(slot)) return;
         const bn = val('searchBusinessNumber');
-        await api('GET', `/api/v1/company-search/${encodeURIComponent(bn)}`, { token: tokens[slot].accessToken });
+        await api('GET', `/api/v1/company/${encodeURIComponent(bn)}`, { token: tokens[slot].accessToken });
     }
 
     async function createTrade(slot) {
