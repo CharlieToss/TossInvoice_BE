@@ -413,14 +413,17 @@ public class TradeService {
     }
 
     private Page<TradeEntity> fetchTradePage(Long userId, TradeRole role, TradePhase phase, PageRequest pageable) {
+        TradeStatus terminalStatus = phase == TradePhase.CANCELLED
+                ? TradeStatus.CANCELLED
+                : TradeStatus.COMPLETED;
         if (role == TradeRole.SELLER) {
             return phase == TradePhase.ACTIVE
                     ? tradeRepository.findBySellerIdAndStatusNotInOrderByIdDesc(userId, TERMINAL_STATUSES_FOR_LIST, pageable)
-                    : tradeRepository.findBySellerIdAndStatusOrderByIdDesc(userId, TradeStatus.COMPLETED, pageable);
+                    : tradeRepository.findBySellerIdAndStatusOrderByIdDesc(userId, terminalStatus, pageable);
         }
         return phase == TradePhase.ACTIVE
                 ? tradeRepository.findByBuyerIdAndStatusNotInOrderByIdDesc(userId, TERMINAL_STATUSES_FOR_LIST, pageable)
-                : tradeRepository.findByBuyerIdAndStatusOrderByIdDesc(userId, TradeStatus.COMPLETED, pageable);
+                : tradeRepository.findByBuyerIdAndStatusOrderByIdDesc(userId, terminalStatus, pageable);
     }
 
     private TradeListItemResponse.CompanyMini toCompanyMini(UserEntity u) {
