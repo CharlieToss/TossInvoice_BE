@@ -109,6 +109,7 @@ CREATE TABLE IF NOT EXISTS purchase_order (
     trade_id                  BIGINT       NOT NULL,
     doc_number                VARCHAR(30)  NOT NULL,
     purchase_order_datetime   DATETIME(6)  NOT NULL,
+    shipping_address          VARCHAR(200) NULL,
     desired_delivery_date     DATE         NULL,
     confirmed_delivery_date   DATE         NULL,
     buyer_signature_url       VARCHAR(512) NULL,
@@ -218,3 +219,6 @@ CREATE TABLE IF NOT EXISTS notifications (
 ALTER TABLE users
     ADD COLUMN business_registration_url VARCHAR(512) NULL AFTER password_hash,
     ADD COLUMN bankbook_url              VARCHAR(512) NULL AFTER business_registration_url;
+
+ALTER TABLE purchase_order
+    ADD COLUMN shipping_address VARCHAR(200) NULL AFTER purchase_order_datetime;

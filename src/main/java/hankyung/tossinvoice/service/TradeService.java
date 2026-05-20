@@ -80,9 +80,11 @@ public class TradeService {
             throw BaseException.type(TradeErrorCode.SELF_TRADE_NOT_ALLOWED);
         }
 
-        // 가격은 서버에서 재계산 — 클라가 보낸 subtotal/total은 신뢰하지 않습니다.
+        // 가격·부가세는 서버에서 재계산 — 클라가 보낸 subtotal/total/tax는 신뢰하지 않습니다.
+        // 부가세는 표준세율 10% 적용 (반올림).
         int itemsSum = request.items().stream().mapToInt(OrderItemRequest::subtotal).sum();
-        int totalAmount = itemsSum + request.tax();
+        int tax = (int) Math.round(itemsSum * 0.1);
+        int totalAmount = itemsSum + tax;
 
         TradeEntity trade = TradeEntity.builder()
                 .sellerId(sellerId)
@@ -90,7 +92,7 @@ public class TradeService {
                 .status(TradeStatus.PENDING_PO)
                 .depositRate(request.depositRate())
                 .totalAmount(totalAmount)
-                .tax(request.tax())
+                .tax(tax)
                 .build();
         TradeEntity savedTrade = tradeRepository.save(trade);
 
@@ -186,7 +188,11 @@ public class TradeService {
                 .orElseThrow(() -> BaseException.type(TradeErrorCode.PURCHASE_ORDER_NOT_STARTED));
 
         String buyerSignatureUrl = storagePort.upload(signature, "signatures/purchase-order/buyer/" + tradeId);
-        purchaseOrder.completeByBuyer(request.desiredDeliveryDate(), buyerSignatureUrl, LocalDateTime.now());
+        purchaseOrder.completeByBuyer(
+                request.desiredDeliveryDate(),
+                request.shippingAddress(),
+                buyerSignatureUrl,
+                LocalDateTime.now());
 
         trade.changeStatus(TradeStatus.PENDING_SELLER_SIGN);
         eventPublisher.publishEvent(NotificationEvent.of(buyerId, trade.getSellerId(), tradeId, NotificationType.PO_RECEIVED));
@@ -472,6 +478,7 @@ public class TradeService {
                         .purchaseOrderDatetime(po.getPurchaseOrderDatetime())
                         .desiredDeliveryDate(po.getDesiredDeliveryDate())
                         .confirmedDeliveryDate(po.getConfirmedDeliveryDate())
+                        .shippingAddress(po.getShippingAddress())
                         .buyerSignatureUrl(po.getBuyerSignatureUrl())
                         .buyerSignedAt(po.getBuyerSignedAt())
                         .sellerSignatureUrl(po.getSellerSignatureUrl())

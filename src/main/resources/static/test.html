@@ -188,7 +188,7 @@
         <div class="row"><label>제작 소요일</label><input id="piProductionDays" type="number" value="10"></div>
         <div class="row"><label>견적 유효기간</label><input id="piValidUntil" type="datetime-local"></div>
         <div class="row"><label>선금 비율 (%)</label><input id="piDepositRate" type="number" value="30"></div>
-        <div class="row"><label>세액</label><input id="piTax" type="number" value="10000"></div>
+        <div class="note">세액(부가세)은 서버에서 itemsSum × 0.1로 재계산하므로 입력 불필요.</div>
         <div class="row" style="align-items: start;">
             <label>품목</label>
             <div>
@@ -255,6 +255,7 @@
         <div class="note">발주처 토큰. multipart + 서명.</div>
         <div class="row"><label>tradeId</label><input id="completePoTradeId" type="number"></div>
         <div class="row"><label>희망 납기일</label><input id="completePoDesiredDate" type="date"></div>
+        <div class="row"><label>배송지</label><input id="completePoShippingAddress" value="서울특별시 마포구 와우산로 80, 3층 창고동"></div>
         <button class="a" onclick="completePurchaseOrder('A')">A로 완료</button>
         <button class="b" onclick="completePurchaseOrder('B')">B로 완료</button>
     </section>
@@ -557,7 +558,6 @@
             productionDays: Number(val('piProductionDays')),
             validUntil: val('piValidUntil'),
             depositRate: Number(val('piDepositRate')),
-            tax: Number(val('piTax')),
             items
         };
         await multipart('POST', '/api/v1/trades', tokens[slot].accessToken, data);
@@ -594,7 +594,10 @@
     async function completePurchaseOrder(slot) {
         if (!requireToken(slot)) return;
         const id = val('completePoTradeId');
-        const data = { desiredDeliveryDate: val('completePoDesiredDate') };
+        const data = {
+            desiredDeliveryDate: val('completePoDesiredDate'),
+            shippingAddress: val('completePoShippingAddress')
+        };
         await multipart('PUT', `/api/v1/trades/${id}/purchase-order`, tokens[slot].accessToken, data);
     }
 

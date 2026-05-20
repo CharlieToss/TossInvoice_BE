@@ -66,6 +66,8 @@ public record TradeDetailResponse(
             LocalDateTime purchaseOrderDatetime,
             LocalDate desiredDeliveryDate,
             LocalDate confirmedDeliveryDate,
+            // 발주처가 PO 작성 시 입력한 배송지(고정).
+            String shippingAddress,
             String buyerSignatureUrl,
             LocalDateTime buyerSignedAt,
             String sellerSignatureUrl,

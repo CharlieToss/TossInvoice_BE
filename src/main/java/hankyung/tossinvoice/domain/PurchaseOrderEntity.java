@@ -42,6 +42,11 @@ public class PurchaseOrderEntity extends BaseTimeEntity {
     @Column(name = "purchase_order_datetime", nullable = false)
     private LocalDateTime purchaseOrderDatetime;
 
+    // 발주처가 PO 작성 시 입력하는 배송지(예: "서울특별시 마포구 와우산로 80, 3층 창고동").
+    // PO 작성·서명 완료 시점에 채워지며 이후 단계에선 수정 불가.
+    @Column(name = "shipping_address", length = 200)
+    private String shippingAddress;
+
     // 발주처가 작성 시 입력하는 희망 납기일.
     @Column(name = "desired_delivery_date")
     private LocalDate desiredDeliveryDate;
@@ -84,8 +89,10 @@ public class PurchaseOrderEntity extends BaseTimeEntity {
     }
 
     // 발주처가 PO 작성·서명·발행을 완료하는 시점에 호출합니다.
-    public void completeByBuyer(LocalDate desiredDeliveryDate, String buyerSignatureUrl, LocalDateTime signedAt) {
+    public void completeByBuyer(LocalDate desiredDeliveryDate, String shippingAddress,
+                                String buyerSignatureUrl, LocalDateTime signedAt) {
         this.desiredDeliveryDate = desiredDeliveryDate;
+        this.shippingAddress = shippingAddress;
         this.buyerSignatureUrl = buyerSignatureUrl;
         this.buyerSignedAt = signedAt;
     }

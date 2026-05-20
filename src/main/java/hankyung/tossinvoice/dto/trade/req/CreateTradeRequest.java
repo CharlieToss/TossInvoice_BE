@@ -35,9 +35,7 @@ public record CreateTradeRequest(
         @DecimalMax(value = "100", message = "선금 비율은 100% 이하이어야 합니다.")
         BigDecimal depositRate,
 
-        @NotNull(message = "세액을 입력해주세요.")
-        @Min(value = 0, message = "세액은 0 이상이어야 합니다.")
-        Integer tax,
+        // tax는 서버에서 itemsSum × 0.1로 재계산하므로 요청 본문에서 받지 않습니다.
 
         @NotEmpty(message = "거래 품목을 1개 이상 입력해주세요.")
         @Valid
