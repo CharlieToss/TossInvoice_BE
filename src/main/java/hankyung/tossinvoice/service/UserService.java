@@ -68,7 +68,7 @@ public class UserService {
 
         if(reportCount > 5) {
             return "위험";
-        } else if(reportCount > 1) {
+        } else if(reportCount >= 1) {
             return "주의";
         } else {
             return "정상";
